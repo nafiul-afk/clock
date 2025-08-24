@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Clock with Timer & Stopwatch</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #f0f0f0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            transition: background-color 0.5s ease;
+        }
+        
+        .clock-container {
+            text-align: center;
+            width: 100%;
+            padding: 20px;
+        }
+        
+        .time {
+            font-size: 20vw;
+            font-weight: 200;
+            margin-bottom: 20px;
+            letter-spacing: -1px;
+        }
+        
+        .date {
+            font-size: 4vw;
+            margin-bottom: 40px;
+            opacity: 0.7;
+        }
+        
+        .progress-container {
+            width: 80%;
+            max-width: 800px;
+            height: 6px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin: 20px auto;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: #4CAF50;
+            transition: width 0.5s ease;
+        }
+        
+        .session-info {
+            font-size: 3vw;
+            margin-top: 20px;
+            opacity: 0.8;
+        }
+        
+        .controls {
+            position: fixed;
+            bottom: 30px;
+            display: flex;
+            gap: 15px;
+        }
+        
+        button {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .settings-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* Focus mode styles */
+        body.focus-mode {
+            background-color: #0a0a0a;
+        }
+        
+        body.focus-mode .date,
+        body.focus-mode .session-info,
+        body.focus-mode .controls {
+            opacity: 0.2;
+            transition: opacity 0.5s ease;
+        }
+        
+        body.focus-mode .date:hover,
+        body.focus-mode .session-info:hover,
+        body.focus-mode .controls:hover {
+            opacity: 1;
+        }
+        
+        /* Settings panel */
+        .settings-panel {
+            position: fixed;
+            top: 0;
+            right: -300px;
+            width: 300px;
+            height: 100%;
+            background-color: #1e1e1e;
+            padding: 20px;
+            transition: right 0.3s ease;
+            z-index: 100;
+            overflow-y: auto;
+        }
+        
+        .settings-panel.open {
+            right: 0;
+        }
+        
+        .close-settings {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            cursor: pointer;
+        }
+        
+        .setting-group {
+            margin-bottom: 20px;
+        }
+        
+        .setting-group h3 {
+            margin-bottom: 10px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+        }
+        
+        .setting-option {
+            margin: 10px 0;
+        }
+        
+        input[type="number"] {
+            width: 60px;
+            padding: 8px;
+            background-color: #333;
+            border: none;
+            border-radius: 4px;
+            color: white;
+        }
+        
+        select {
+            padding: 8px;
+            background-color: #333;
+            border: none;
+            border-radius: 4px;
+            color: white;
+        }
+        
+        /* Timer and Stopwatch Styles */
+        .timer-display {
+            font-size: 5vw;
+            margin: 20px 0;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .timer-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        .timer-inputs {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        
+        .timer-input {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .timer-input label {
+            font-size: 12px;
+            margin-bottom: 5px;
+            opacity: 0.7;
+        }
+        
+        .mode-buttons {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        
+        .mode-btn {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+        
+        .mode-btn.active {
+            background-color: rgba(76, 175, 80, 0.3);
+        }
+        
+        @media (max-width: 768px) {
+            .time {
+                font-size: 25vw;
+            }
+            
+            .date {
+                font-size: 5vw;
+            }
+            
+            .session-info {
+                font-size: 4vw;
+            }
+            
+            .timer-display {
+                font-size: 15vw;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="clock-container">
+        <div class="time" id="time">00:00:00</div>
+        <div class="date" id="date">Monday, January 1, 2023</div>
+        
+        <!-- Timer/Stopwatch Display -->
+        <div class="timer-display" id="timer-display" style="display: none;">00:00:00</div>
+        
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        
+        <div class="session-info" id="session-info">Session not started</div>
+    </div>
+    
+    <div class="mode-buttons">
+        <button class="mode-btn active" id="clock-mode-btn">Clock</button>
+        <button class="mode-btn" id="timer-mode-btn">Countdown</button>
+        <button class="mode-btn" id="stopwatch-mode-btn">Stopwatch</button>
+    </div>
+    
+    <div class="controls">
+        <button id="start-btn">Start Session</button>
+        <button id="focus-btn">Focus Mode</button>
+    </div>
+    
+    <button class="settings-btn" id="settings-btn">⚙️</button>
+    
+    <div class="settings-panel" id="settings-panel">
+        <button class="close-settings" id="close-settings">×</button>
+        <h2>Study Clock Settings</h2>
+        
+        <div class="setting-group">
+            <h3>Session Timer</h3>
+            <div class="setting-option">
+                <label for="session-length">Session Length (minutes):</label>
+                <input type="number" id="session-length" min="1" max="120" value="25">
+            </div>
+            <div class="setting-option">
+                <label for="break-length">Break Length (minutes):</label>
+                <input type="number" id="break-length" min="1" max="30" value="5">
+            </div>
+        </div>
+        
+        <div class="setting-group">
+            <h3>Countdown Timer</h3>
+            <div class="setting-option">
+                <label for="timer-hours">Hours:</label>
+                <input type="number" id="timer-hours" min="0" max="23" value="0">
+            </div>
+            <div class="setting-option">
+                <label for="timer-minutes">Minutes:</label>
+                <input type="number" id="timer-minutes" min="0" max="59" value="10">
+            </div>
+            <div class="setting-option">
+                <label for="timer-seconds">Seconds:</label>
+                <input type="number" id="timer-seconds" min="0" max="59" value="0">
+            </div>
+        </div>
+        
+        <div class="setting-group">
+            <h3>Appearance</h3>
+            <div class="setting-option">
+                <label for="color-theme">Color Theme:</label>
+                <select id="color-theme">
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
+                    <option value="green">Green</option>
+                    <option value="blue">Blue</option>
+                </select>
+            </div>
+            <div class="setting-option">
+                <label for="clock-format">Time Format:</label>
+                <select id="clock-format">
+                    <option value="24h">24-hour</option>
+                    <option value="12h">12-hour</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const timeElement = document.getElementById('time');
+        const dateElement = document.getElementById('date');
+        const timerDisplay = document.getElementById('timer-display');
+        const progressBar = document.getElementById('progress-bar');
+        const sessionInfo = document.getElementById('session-info');
+        const startBtn = document.getElementById('start-btn');
+        const focusBtn = document.getElementById('focus-btn');
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsPanel = document.getElementById('settings-panel');
+        const closeSettings = document.getElementById('close-settings');
+        const sessionLengthInput = document.getElementById('session-length');
+        const breakLengthInput = document.getElementById('break-length');
+        const colorThemeSelect = document.getElementById('color-theme');
+        const clockFormatSelect = document.getElementById('clock-format');
+        const clockModeBtn = document.getElementById('clock-mode-btn');
+        const timerModeBtn = document.getElementById('timer-mode-btn');
+        const stopwatchModeBtn = document.getElementById('stopwatch-mode-btn');
+        const timerHoursInput = document.getElementById('timer-hours');
+        const timerMinutesInput = document.getElementById('timer-minutes');
+        const timerSecondsInput = document.getElementById('timer-seconds');
+        
+        // State variables
+        let isSessionActive = false;
+        let isFocusMode = false;
+        let sessionTimer = null;
+        let sessionEndTime = null;
+        let currentSessionType = 'session'; // 'session' or 'break'
+        let currentMode = 'clock'; // 'clock', 'timer', or 'stopwatch'
+        let stopwatchStartTime = null;
+        let stopwatchElapsed = 0;
+        let stopwatchInterval = null;
+        let timerEndTime = null;
+        let timerInterval = null;
+        
+        // Initialize clock
+        function updateClock() {
+            const now = new Date();
+            let hours = now.getHours();
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            
+            // Format time based on setting
+            if (clockFormatSelect.value === '12h') {
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12 || 12;
+                timeElement.textContent = `${hours}:${minutes}:${seconds} ${ampm}`;
+            } else {
+                timeElement.textContent = `${hours.toString().padStart(2, '0')}:${minutes}:${seconds}`;
+            }
+            
+            // Update date
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            dateElement.textContent = now.toLocaleDateString('en-US', options);
+            
+            // Update progress bar if session is active
+            if (isSessionActive && currentMode === 'clock') {
+                const totalTime = currentSessionType === 'session' 
+                    ? parseInt(sessionLengthInput.value) * 60 
+                    : parseInt(breakLengthInput.value) * 60;
+                const elapsed = Math.max(0, sessionEndTime - now.getTime());
+                const percentage = 100 - (elapsed / (totalTime * 1000)) * 100;
+                progressBar.style.width = `${percentage}%`;
+                
+                // Check if session is complete
+                if (now.getTime() >= sessionEndTime) {
+                    endSession();
+                }
+            }
+            
+            requestAnimationFrame(updateClock);
+        }
+        
+        // Start a study session or break
+        function startSession() {
+            if (isSessionActive) {
+                endSession();
+                return;
+            }
+            
+            isSessionActive = true;
+            const now = new Date();
+            const sessionMinutes = parseInt(
+                currentSessionType === 'session' 
+                ? sessionLengthInput.value 
+                : breakLengthInput.value
+            );
+            
+            sessionEndTime = now.getTime() + (sessionMinutes * 60 * 1000);
+            startBtn.textContent = 'End Session';
+            
+            sessionInfo.textContent = `${currentSessionType === 'session' ? 'Study' : 'Break'} session in progress - ${sessionMinutes} minutes`;
+            
+            // Visual feedback for session type
+            progressBar.style.backgroundColor = currentSessionType === 'session' ? '#4CAF50' : '#2196F3';
+        }
+        
+        // End the current session
+        function endSession() {
+            isSessionActive = false;
+            clearTimeout(sessionTimer);
+            progressBar.style.width = '0%';
+            startBtn.textContent = 'Start Session';
+            
+            // Switch session type for next time
+            if (currentSessionType === 'session') {
+                sessionInfo.textContent = `Study session completed! Time for a break.`;
+                currentSessionType = 'break';
+            } else {
+                sessionInfo.textContent = `Break completed! Ready for another study session?`;
+                currentSessionType = 'session';
+            }
+        }
+        
+        // Toggle focus mode
+        function toggleFocusMode() {
+            isFocusMode = !isFocusMode;
+            document.body.classList.toggle('focus-mode', isFocusMode);
+            focusBtn.textContent = isFocusMode ? 'Normal Mode' : 'Focus Mode';
+        }
+        
+        // Apply color theme
+        function applyTheme(theme) {
+            document.body.style.backgroundColor = 
+                theme === 'light' ? '#f0f0f0' :
+                theme === 'green' ? '#0a1f0a' :
+                theme === 'blue' ? '#0a0a1f' : '#121212';
+                
+            document.body.style.color = 
+                theme === 'light' ? '#333' : '#f0f0f0';
+        }
+        
+        // Switch between clock, timer, and stopwatch modes
+        function setMode(mode) {
+            currentMode = mode;
+            
+            // Update UI based on mode
+            clockModeBtn.classList.toggle('active', mode === 'clock');
+            timerModeBtn.classList.toggle('active', mode === 'timer');
+            stopwatchModeBtn.classList.toggle('active', mode === 'stopwatch');
+            
+            // Show/hide elements based on mode
+            timeElement.style.display = mode === 'clock' ? 'block' : 'none';
+            dateElement.style.display = mode === 'clock' ? 'block' : 'none';
+            timerDisplay.style.display = mode !== 'clock' ? 'block' : 'none';
+            
+            // Reset progress bar
+            progressBar.style.width = '0%';
+            
+            // Stop any running timers
+            if (stopwatchInterval) {
+                clearInterval(stopwatchInterval);
+                stopwatchInterval = null;
+            }
+            
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            
+            // Update button text and session info
+            if (mode === 'clock') {
+                startBtn.textContent = 'Start Session';
+                sessionInfo.textContent = 'Session not started';
+                isSessionActive = false;
+            } else if (mode === 'timer') {
+                startBtn.textContent = 'Start Timer';
+                updateTimerDisplay();
+                sessionInfo.textContent = 'Timer ready';
+            } else if (mode === 'stopwatch') {
+                startBtn.textContent = 'Start Stopwatch';
+                timerDisplay.textContent = '00:00:00';
+                sessionInfo.textContent = 'Stopwatch ready';
+                stopwatchElapsed = 0;
+            }
+        }
+        
+        // Update timer display
+        function updateTimerDisplay() {
+            const hours = parseInt(timerHoursInput.value) || 0;
+            const minutes = parseInt(timerMinutesInput.value) || 0;
+            const seconds = parseInt(timerSecondsInput.value) || 0;
+            
+            timerDisplay.textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        // Start/stop timer or stopwatch based on current mode
+        function toggleTimer() {
+            if (currentMode === 'clock') {
+                // Use the original session functionality
+                if (isSessionActive) {
+                    endSession();
+                } else {
+                    startSession();
+                }
+            } else if (currentMode === 'timer') {
+                // Timer functionality
+                if (timerInterval) {
+                    // Stop the timer
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                    startBtn.textContent = 'Start Timer';
+                    sessionInfo.textContent = 'Timer paused';
+                } else {
+                    // Start the timer
+                    const hours = parseInt(timerHoursInput.value) || 0;
+                    const minutes = parseInt(timerMinutesInput.value) || 0;
+                    const seconds = parseInt(timerSecondsInput.value) || 0;
+                    
+                    const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+                    
+                    if (totalSeconds > 0) {
+                        timerEndTime = Date.now() + totalSeconds * 1000;
+                        startBtn.textContent = 'Pause Timer';
+                        
+                        timerInterval = setInterval(() => {
+                            const remaining = timerEndTime - Date.now();
+                            
+                            if (remaining <= 0) {
+                                clearInterval(timerInterval);
+                                timerInterval = null;
+                                timerDisplay.textContent = '00:00:00';
+                                startBtn.textContent = 'Start Timer';
+                                sessionInfo.textContent = 'Timer completed!';
+                                progressBar.style.width = '100%';
+                                
+                                // Play completion sound (would need to add audio element)
+                                return;
+                            }
+                            
+                            const secs = Math.floor(remaining / 1000);
+                            const hrs = Math.floor(secs / 3600);
+                            const mins = Math.floor((secs % 3600) / 60);
+                            const secsRemaining = secs % 60;
+                            
+                            timerDisplay.textContent = 
+                                `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secsRemaining.toString().padStart(2, '0')}`;
+                                
+                            // Update progress bar
+                            const percentage = 100 - (remaining / (totalSeconds * 1000)) * 100;
+                            progressBar.style.width = `${percentage}%`;
+                            
+                        }, 100);
+                    }
+                }
+            } else if (currentMode === 'stopwatch') {
+                // Stopwatch functionality
+                if (stopwatchInterval) {
+                    // Stop the stopwatch
+                    clearInterval(stopwatchInterval);
+                    stopwatchInterval = null;
+                    stopwatchElapsed = Date.now() - stopwatchStartTime;
+                    startBtn.textContent = 'Resume Stopwatch';
+                    sessionInfo.textContent = 'Stopwatch paused';
+                } else {
+                    // Start/resume the stopwatch
+                    stopwatchStartTime = Date.now() - stopwatchElapsed;
+                    startBtn.textContent = 'Pause Stopwatch';
+                    
+                    stopwatchInterval = setInterval(() => {
+                        const elapsed = Date.now() - stopwatchStartTime;
+                        const hrs = Math.floor(elapsed / 3600000);
+                        const mins = Math.floor((elapsed % 3600000) / 60000);
+                        const secs = Math.floor((elapsed % 60000) / 1000);
+                        
+                        timerDisplay.textContent = 
+                            `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                            
+                        // Update progress bar (resets every hour)
+                        const percentage = (elapsed % 3600000) / 3600000 * 100;
+                        progressBar.style.width = `${percentage}%`;
+                    }, 100);
+                }
+            }
+        }
+        
+        // Event listeners
+        startBtn.addEventListener('click', toggleTimer);
+        focusBtn.addEventListener('click', toggleFocusMode);
+        settingsBtn.addEventListener('click', () => settingsPanel.classList.add('open'));
+        closeSettings.addEventListener('click', () => settingsPanel.classList.remove('open'));
+        
+        clockModeBtn.addEventListener('click', () => setMode('clock'));
+        timerModeBtn.addEventListener('click', () => setMode('timer'));
+        stopwatchModeBtn.addEventListener('click', () => setMode('stopwatch'));
+        
+        colorThemeSelect.addEventListener('change', () => applyTheme(colorThemeSelect.value));
+        clockFormatSelect.addEventListener('change', updateClock);
+        
+        timerHoursInput.addEventListener('change', updateTimerDisplay);
+        timerMinutesInput.addEventListener('change', updateTimerDisplay);
+        timerSecondsInput.addEventListener('change', updateTimerDisplay);
+        
+        // Initialize
+        updateClock();
+        applyTheme(colorThemeSelect.value);
+        updateTimerDisplay();
+    </script>
+</body>
+</html>
